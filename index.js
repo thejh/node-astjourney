@@ -253,10 +253,7 @@ function makeAst(code) {
 
 function visitAll(node, cb) {
   node.children.forEach(function(child) {
-    // FIXME
-    if (child) {
-      visitAll(child, cb)
-    }
+    visitAll(child, cb)
   })
   cb(node)
 }
