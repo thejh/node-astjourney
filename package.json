@@ -11,5 +11,10 @@
   "dependencies": {
     "uglify-js": "*"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "tap": "*"
+  },
+  "scripts" : {
+    "test" : "tap test/*.js"
+  }
 }
