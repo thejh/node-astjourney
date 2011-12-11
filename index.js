@@ -4,7 +4,7 @@ exports.makeAst = makeAst
 exports.visitAll = visitAll
 
 function makeAst(code) {
-  var ast = makeUglyAst(code)
+  var ast = makeUglyAst(code, false, true)
   return transformNode(ast)
   
   function transformNode(uglyNode) {
@@ -18,7 +18,14 @@ function makeAst(code) {
       })
       return result
     })
-    prettyNode.type = uglyNode[0]
+    prettyNode.type = uglyNode[0].name || uglyNode[0]
+    prettyNode.rawNode = uglyNode
+    if (uglyNode[0].start) {
+      prettyNode.position =
+      { startToken: uglyNode[0].start
+      , endToken: uglyNode[0].end
+      }
+    }
     switch (prettyNode.type) {
       case 'string':
       case 'num':
