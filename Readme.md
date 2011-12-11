@@ -1,1 +1,1 @@
-[![Build Status](https://secure.travis-ci.org/thejh/node-astjourney.png)](http://travis-ci.org/thejh/node-astjourney)
+[![Build Status](https://secure.travis-ci.org/thejh/node-astjourney.png?branch=locations)](http://travis-ci.org/thejh/node-astjourney?branch=locations)
