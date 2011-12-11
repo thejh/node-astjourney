@@ -245,7 +245,7 @@ function makeAst(code) {
         prettyNode.name = uglyNode[1]
         break
       default:
-        throw new Error('unknown node type '+uglyNode[0])
+        throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
     }
     return prettyNode
   }
