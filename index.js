@@ -63,8 +63,10 @@ function makeAst(code) {
         break
       case 'throw':
       case 'return':
-        prettyNode.expr = transformNode(uglyNode[1])
-        childSources.push(function(){return [prettyNode.expr]})
+        if (uglyNode[1] != null) {
+          prettyNode.expr = transformNode(uglyNode[1])
+        }
+        childSources.push(function(){return prettyNode.expr ? [prettyNode.expr] : []})
         break
       case 'new':
       case 'call':
