@@ -9,3 +9,7 @@ if (foobar) {
   }
   qux(1, 3, quux(require('d').bar.foo, 4), 2)
 }
+
+function func() {
+  return
+}
