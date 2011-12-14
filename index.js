@@ -1,17 +1,66 @@
 var makeUglyAst = require('uglify-js').parser.parse;
 var uglyGenCode = require('uglify-js').uglify.gen_code;
 
+// ==== EXPORTS ====
 exports.makeAst = makeAst
 exports.visitAll = visitAll
 exports.updateParentData = updateParentData
+exports.addScopeData = addScopeData
 exports.stringifyAst = stringifyAst
+
+// ==== NODE ====
+function Node(type) {
+  this.type = type
+  this.parent = null
+  this.scope = null
+}
+
+Node.prototype.getScope = function() {
+  var node = this
+  while (node && !node.scope) {
+    node = node.parent
+  }
+  if (node.scope) return node.scope
+  throw new Error('could not find scope, use addScopeData and updateParentData to regenerate data')
+}
+
+// ==== SCOPE ====
+function Scope(options) {
+  this.parent = null
+  this.node = null
+  this.variableUses = []
+  this.declaredVariables = {}
+    
+  joinObj(this, options)
+}
+  
+Scope.prototype.addVariableUsage = function(name, node) {
+  if (this.variableUses.indexOf(name) === -1) {
+    this.variableUses.push(name)
+  }
+}
+  
+Scope.prototype.addDeclaration = function(name, node, value) {
+  if (!this.declaredVariables.hasOwnProperty(name)) {
+    this.declaredVariables[name] = []
+  }
+  this.declaredVariables[name].push({node:node, value:value})
+}
+  
+Scope.prototype.getVariablesScope = function(name) {
+  var scope = this
+  while (scope && !scope.declaredVariables.hasOwnProperty(name)) {
+    scope = scope.parent
+  }
+  return scope
+}
 
 function makeAst(code) {
   var ast = makeUglyAst(code)
   return transformNode(ast)
   
   function transformNode(uglyNode) { try {
-    var prettyNode = {}
+    var prettyNode = new Node(uglyNode[0])
     var childSources = []
     prettyNode.__defineGetter__('children', function() {
       var result = []
@@ -21,7 +70,6 @@ function makeAst(code) {
       })
       return result
     })
-    prettyNode.type = uglyNode[0]
     switch (prettyNode.type) {
       case 'string':
       case 'num':
@@ -448,6 +496,38 @@ function updateParentData(ast) {
   visitAll(ast, function(node, parents) {
     node.parent = parents.last
   })
+}
+
+function addScopeData(ast) {
+  if (!ast.type === 'toplevel') throw new Error('expecting a toplevel node on top')
+  
+  var SCOPE_BORDER = ['toplevel', 'function', 'defun']
+  
+  var scopeStack = []
+  var scope = null
+  visitAll(ast, function(node, nodeParents) {
+    if (SCOPE_BORDER.indexOf(node.type) !== -1) {
+      scopeStack.pop()
+      scope = scopeStack[scopeStack.length-1]
+    }
+    if (node.type === 'name') {
+      scope.addVariableUsage(node.value, node)
+    }
+    if (node.type === 'var' || node.type === 'const') {
+      node.vardefs.forEach(function(def) {
+        scope.addDeclaration(def.name, node, def.value)
+      })
+    }
+    if (node.type === 'defun') {
+      scope.addDeclaration(node.name, node, node)
+    }
+  }, {preCb: function(node, nodeParents) {
+    if (SCOPE_BORDER.indexOf(node.type) !== -1) {
+      scope = new Scope({parent: scope, node: node})
+      node.scope = scope
+      scopeStack.push(scope)
+    }
+  }})
 }
 
 function visitAll(node, cb, options) {

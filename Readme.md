@@ -20,6 +20,10 @@ Attaching `parent` properties pointing to the parent nodes to all nodes (must be
 
     astjourney.updateParentData(ast)
 
+Attaching `scope` properties to scope root nodes (must be called again after AST changes):
+
+    astjourney.addScopeData(ast)
+
 Generating code from an AST (`opts` are optional, they get passed through to `uglifyjs.gen_code`, you can e.g. specify that you don't want your code to be one big line):
 
     var code = astjourney.stringifyAst(ast[, opts])
@@ -33,6 +37,21 @@ Generic properties:
  - `children` is an array that contains all child nodes of the given node combined. This is a getter that creates a new array on access,
    changing the array has no effect.
  - `parent` is the parent node (doesn't get updated automatically, not present by default, generate it with `astjourney.updateParentData`).
+ - `scope` is the scope of which this node is the root element or `null` (doesn't get updated automatically, not present by default, generate it with `astjourney.addScopeData`).
+
+
+Generic methods:
+
+ - `getScope()` walks up the parent chain (parent data must be correct) until it hits a node with a scope (scope data must be correct).
+
+
+Scopes
+======
+Properties (there might be some other undocumented ones, too, but these are the ones that should remain this way):
+
+ - `parent` is the parent scope.
+ - `node` is the node inside of which this scope is. It is a `toplevel`, a `defun` or a `function` node.
+ - `declaredVariables` is an object whose keys are local names that are defined in this scope.
 
 
 Node Types
