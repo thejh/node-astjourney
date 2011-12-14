@@ -25,13 +25,14 @@ Generating code from an AST (`opts` are optional, they get passed through to `ug
     var code = astjourney.stringifyAst(ast[, opts])
 
 
-AST node properties
+AST nodes
 ===================
 Generic properties:
 
  - `type` is a string containing the type of the node, a list of types is in the next section.
  - `children` is an array that contains all child nodes of the given node combined. This is a getter that creates a new array on access,
    changing the array has no effect.
+ - `parent` is the parent node (doesn't get updated automatically, not present by default, generate it with `astjourney.updateParentData`.
 
 
 Node Types
