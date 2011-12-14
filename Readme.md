@@ -1,6 +1,6 @@
 [![Build Status](https://secure.travis-ci.org/thejh/node-astjourney.png?branch=master)](http://travis-ci.org/thejh/node-astjourney?branch=master)
 
-astjourney is a library for reading (yes, no writing yet) javascript ASTs and traversing them. It uses uglify-js under the hood, but tries to give you a nicer interface.
+astjourney is a library for reading, traversing and writing javascript ASTs. It uses uglify-js under the hood, but tries to give you a nicer interface.
 
 
 Methods
@@ -14,6 +14,10 @@ Walking the AST (`ast` can also be a node from the AST - in that case, this only
     astjourney.visitAll(ast, function(node) {
       // called for each node in the AST
     })
+
+Generating code from an AST:
+
+    var code = astjourney.stringifyAst(ast)
 
 
 AST node properties

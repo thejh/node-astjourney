@@ -1,7 +1,9 @@
 var makeUglyAst = require('uglify-js').parser.parse;
+var uglyGenCode = require('uglify-js').uglify.gen_code;
 
 exports.makeAst = makeAst
 exports.visitAll = visitAll
+exports.stringifyAst = stringifyAst
 
 function makeAst(code) {
   var ast = makeUglyAst(code)
@@ -250,6 +252,190 @@ function makeAst(code) {
         throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
     }
     return prettyNode
+  }
+}
+
+function stringifyAst(ast) {
+  ast = transformNode(ast)
+  return uglyGenCode(ast)
+
+  function transformNode(prettyNode) {
+    // don't attach properties here, e.g. a seq will be
+    // `arr=arr.concat()`ted later.
+    var uglyNode = [prettyNode.type]
+
+    switch (prettyNode.type) {
+      case 'string':
+      case 'num':
+      case 'name':
+        uglyNode.push(prettyNode.value)
+        break
+      case 'toplevel':
+      case 'block':
+      case 'splice':
+        uglyNode.push(prettyNode.statements.map(transformNode))
+        break
+      case 'var':
+      case 'const':
+        uglyNode[1] = prettyNode.vardefs.map(function(def) {
+          var result = [def.name]
+          if (def.value) {
+            result.push(transformNode(def.value))
+          }
+          return result
+        })
+        break
+      case 'try':
+        uglyNode.push(prettyNode.tryBlock.map(transformNode))
+        
+        if (prettyNode.catchBlock) {
+          uglyNode.push(
+          [ prettyNode.catchVar
+          , prettyNode.catchBlock.map(transformNode)
+          ])
+        } else uglyNode.push(null)
+        
+        if (prettyNode.finallyBlock) {
+          uglyNode.push(prettyNode.finallyBlock.map(transformNode))
+        } else uglyNode.push(null)
+        
+        break
+      case 'throw':
+      case 'return':
+        if (prettyNode.expr) {
+          uglyNode.push(transformNode(prettyNode.expr))
+        } else uglyNode.push(null)
+      case 'new':
+      case 'call':
+        uglyNode.push(transformNode(prettyNode.func))
+        uglyNode.push(prettyNode.args.map(transformNode))
+        break
+      case 'switch':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(prettyNode.branches.map(function(branch) {
+          var uglyBranch = []
+          uglyBranch.push(prettyBranch.expr != null ?
+            transformNode(prettyBranch.expr)
+          :
+            null
+          )
+          branch.push(prettyBranch.body.map(transformNode))
+          return uglyBranch
+        }))
+        break
+      case 'break':
+      case 'continue':
+        uglyNode.push(prettyNode.label)
+        break
+      case 'conditional':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.ifExpr))
+        uglyNode.push(transformNode(prettyNode.elseExpr))
+        break
+      case 'assign':
+      case 'binary':
+        uglyNode.push(prettyNode.op)
+        uglyNode.push(transformNode(prettyNode.lvalue))
+        uglyNode.push(transformNode(prettyNode.rvalue))
+        break
+      case 'dot':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(prettyNode.property)
+        break
+      case 'function':
+      case 'defun':
+        uglyNode.push(prettyNode.name)
+        uglyNode.push(prettyNode.args)
+        uglyNode.push(prettyNode.body.map(transformNode))
+        break
+      case 'if':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.thenBlock))
+        uglyNode.push(prettyNode.elseBlock ?
+          transformNode(prettyNode.elseBlock)
+        :
+          null
+        )
+        break
+      case 'for':
+        uglyNode.push(prettyNode.init ?
+          transformNode(prettyNode.init)
+        :
+          null
+        )
+        uglyNode.push(prettyNode.condition ?
+          transformNode(prettyNode.condition)
+        :
+          null
+        )
+        uglyNode.push(prettyNode.step ?
+          transformNode(prettyNode.step)
+        :
+          null
+        )
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'for-in':
+        uglyNode.push(transformNode(prettyNode.init))
+        uglyNode.push(transformNode(prettyNode.key))
+        uglyNode.push(transformNode(prettyNode.object))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'while':
+      case 'do':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'unary-prefix':
+      case 'unary-postfix':
+        uglyNode.push(prettyNode.op)
+        uglyNode.push(transformNode(prettyNode.expr))
+        break
+      case 'sub':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(transformNode(prettyNode.subscript))
+        break
+      case 'object':
+        uglyNode.push(prettyNode.props.map(function(prop) {
+          if (prop.value) {
+            return [prop.name, transformNode(prop.value)]
+          } else if (prop.getter) {
+            return [prop.name, transformNode(prop.getter), 'get']
+          } else if (prop.setter) {
+            return [prop.name, transformNode(prop.setter), 'set']
+          } else {
+            throw new Error('my code does weird stuff')
+          }
+        }))
+        break
+      case 'regexp':
+        uglyNode.push(prettyNode.regexp)
+        uglyNode.push(prettyNode.modifiers)
+        break
+      case 'array':
+        uglyNode.push(prettyNode.elements.map(transformNode))
+        break
+      case 'stat':
+        uglyNode.push(transformNode(prettyNode.stat))
+        break
+      case 'seq':
+        uglyNode = uglyNode.concat(prettyNode.exprs.map(transformNode))
+        break
+      case 'label':
+        uglyNode.push(prettyNode.name)
+        uglyNode.push(transformNode(prettyNode.loop))
+        break
+      case 'with':
+        uglyNode.push(transformNode(prettyNode.object))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'atom':
+        uglyNode.push(prettyNode.name)
+        break
+      default:
+        throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
+    }
+    return uglyNode
   }
 }
 
