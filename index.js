@@ -443,9 +443,12 @@ function stringifyAst(ast, opts) {
   }
 }
 
-function visitAll(node, cb) {
+function visitAll(node, cb, parents) {
+  parents = parents || []
+  var childsParents = parents.concat([node])
+  childsParents.last = node
   node.children.forEach(function(child) {
-    visitAll(child, cb)
+    visitAll(child, cb, childsParents)
   })
-  cb(node)
+  cb(node, parents)
 }

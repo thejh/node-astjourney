@@ -9,10 +9,11 @@ Creating an AST from a string of code:
 
     var ast = astjourney.makeAst(code)
 
-Walking the AST (`ast` can also be a node from the AST - in that case, this only traverses its children):
+Walking the AST (depth-first, `ast` can also be a node from the AST - in that case, this only traverses its children):
 
-    astjourney.visitAll(ast, function(node) {
+    astjourney.visitAll(ast, function(node, parents) {
       // called for each node in the AST
+      // parents[parents.length-1] is the parent (shortcut: parents.last)
     })
 
 Generating code from an AST (`opts` are optional, they get passed through to `uglifyjs.gen_code`, you can e.g. specify that you don't want your code to be one big line):
