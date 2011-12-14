@@ -9,7 +9,7 @@ function makeAst(code) {
   var ast = makeUglyAst(code)
   return transformNode(ast)
   
-  function transformNode(uglyNode) {
+  function transformNode(uglyNode) { try {
     var prettyNode = {}
     var childSources = []
     prettyNode.__defineGetter__('children', function() {
@@ -252,7 +252,7 @@ function makeAst(code) {
         throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
     }
     return prettyNode
-  }
+  } catch (e) {e.stack = 'Error in node '+JSON.stringify(uglyNode)+'\n'+e.stack; throw e}}
 }
 
 function stringifyAst(ast) {
