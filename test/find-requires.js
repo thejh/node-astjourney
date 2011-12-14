@@ -20,10 +20,16 @@ test('find-requires', function (t) {
 
 test('require parents are calls', function(t) {
   var ast = journey.makeAst(fs.readFileSync(__dirname+'/data/requires.js', 'utf8'))
-  t.plan(4)
+  t.plan(2 * 4)
   journey.visitAll(ast, function(node, parents) {
     if (node.type === 'name' && node.value === 'require') {
-      t.equal(parents.last.type, 'call', 'parents of "require" names should be calls')
+      t.equal(parents.last.type, 'call', 'parents of "require" names should be calls according to the walker')
+    }
+  })
+  journey.updateParentData(ast)
+  journey.visitAll(ast, function(node) {
+    if (node.type === 'name' && node.value === 'require') {
+      t.equal(node.parent.type, 'call', 'parents of "require" names should be calls according to the nodes')
     }
   })
 })

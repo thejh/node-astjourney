@@ -3,6 +3,7 @@ var uglyGenCode = require('uglify-js').uglify.gen_code;
 
 exports.makeAst = makeAst
 exports.visitAll = visitAll
+exports.updateParentData = updateParentData
 exports.stringifyAst = stringifyAst
 
 function makeAst(code) {
@@ -441,6 +442,12 @@ function stringifyAst(ast, opts) {
     }
     return uglyNode
   }
+}
+
+function updateParentData(ast) {
+  visitAll(ast, function(node, parents) {
+    node.parent = parents.last
+  })
 }
 
 function visitAll(node, cb, parents) {

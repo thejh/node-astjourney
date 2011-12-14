@@ -16,6 +16,10 @@ Walking the AST (depth-first, `ast` can also be a node from the AST - in that ca
       // parents[parents.length-1] is the parent (shortcut: parents.last)
     })
 
+Attaching `parent` properties pointing to the parent nodes to all nodes (must be called again after AST changes):
+
+    astjourney.updateParentData(ast)
+
 Generating code from an AST (`opts` are optional, they get passed through to `uglifyjs.gen_code`, you can e.g. specify that you don't want your code to be one big line):
 
     var code = astjourney.stringifyAst(ast[, opts])
