@@ -30,8 +30,10 @@ function makeAst(code) {
       case 'toplevel':
       case 'block':
       case 'splice':
-        prettyNode.statements = uglyNode[1].map(transformNode)
-        childSources.push(function(){return prettyNode.statements})
+        if (uglyNode[1]) {
+          prettyNode.statements = uglyNode[1].map(transformNode)
+        }
+        childSources.push(function(){return prettyNode.statements || []})
         break
       case 'var':
       case 'const':
@@ -273,7 +275,9 @@ function stringifyAst(ast) {
       case 'toplevel':
       case 'block':
       case 'splice':
-        uglyNode.push(prettyNode.statements.map(transformNode))
+        uglyNode.push(prettyNode.statements ?
+          prettyNode.statements.map(transformNode)
+        : null)
         break
       case 'var':
       case 'const':

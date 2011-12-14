@@ -73,7 +73,7 @@ This is a `{}` block of statements. Note that not everything that looks like a b
 
 Properties:
 
- - `statements` is an array of statements.
+ - `statements` is an array of statements or undefined.
 
 
 splice
