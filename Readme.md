@@ -9,12 +9,12 @@ Creating an AST from a string of code:
 
     var ast = astjourney.makeAst(code)
 
-Walking the AST (depth-first, `ast` can also be a node from the AST - in that case, this only traverses its children):
+Walking the AST. Depth-first, but you can also specify a breadth-first callback as `options.preCb`. `ast` can also be a node from the AST - in that case, this only traverses its children.
 
     astjourney.visitAll(ast, function(node, parents) {
       // called for each node in the AST
       // parents[parents.length-1] is the parent (shortcut: parents.last)
-    })
+    }[, options])
 
 Attaching `parent` properties pointing to the parent nodes to all nodes (must be called again after AST changes):
 

@@ -450,12 +450,29 @@ function updateParentData(ast) {
   })
 }
 
-function visitAll(node, cb, parents) {
-  parents = parents || []
+function visitAll(node, cb, options) {
+  options = options || {}
+  var parents = options.parents || []
   var childsParents = parents.concat([node])
   childsParents.last = node
+  if (options.preCb) options.preCb(node, parents)
   node.children.forEach(function(child) {
-    visitAll(child, cb, childsParents)
+    visitAll(child, cb, cloneWith(options, {parents: childsParents}))
   })
   cb(node, parents)
+}
+
+
+// ==== HELPERS ====
+function joinObj(base, joined) {
+  Object.keys(joined).forEach(function(key) {
+    base[key] = joined[key]
+  })
+}
+
+function cloneWith(base, joined) {
+  var result = {}
+  joinObj(result, base)
+  joinObj(result, joined)
+  return result
 }
