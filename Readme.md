@@ -15,9 +15,9 @@ Walking the AST (`ast` can also be a node from the AST - in that case, this only
       // called for each node in the AST
     })
 
-Generating code from an AST:
+Generating code from an AST (`opts` are optional, they get passed through to `uglifyjs.gen_code`, you can e.g. specify that you don't want your code to be one big line):
 
-    var code = astjourney.stringifyAst(ast)
+    var code = astjourney.stringifyAst(ast[, opts])
 
 
 AST node properties

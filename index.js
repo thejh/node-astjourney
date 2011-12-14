@@ -257,9 +257,9 @@ function makeAst(code) {
   } catch (e) {e.stack = 'Error in node '+JSON.stringify(uglyNode)+'\n'+e.stack; throw e}}
 }
 
-function stringifyAst(ast) {
+function stringifyAst(ast, opts) {
   ast = transformNode(ast)
-  return uglyGenCode(ast)
+  return uglyGenCode(ast, opts)
 
   function transformNode(prettyNode) {
     // don't attach properties here, e.g. a seq will be
