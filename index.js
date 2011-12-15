@@ -7,6 +7,8 @@ exports.visitAll = visitAll
 exports.updateParentData = updateParentData
 exports.addScopeData = addScopeData
 exports.stringifyAst = stringifyAst
+exports.Node = Node
+exports.Scope = Scope
 
 // ==== NODE ====
 function Node(type) {
