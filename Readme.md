@@ -52,6 +52,7 @@ Properties (there might be some other undocumented ones, too, but these are the 
  - `parent` is the parent scope.
  - `node` is the node inside of which this scope is. It is a `toplevel`, a `defun` or a `function` node.
  - `declaredVariables` is an object whose keys are local names that are defined in this scope.
+ - `children` is an array of child scopes.
 
 
 Node Types

@@ -30,6 +30,7 @@ Node.prototype.getScope = function() {
 function Scope(options) {
   this.parent = null
   this.node = null
+  this.children = []
   this.variableUses = {}
   this.declaredVariables = {}
     
@@ -526,7 +527,9 @@ function addScopeData(ast) {
     }
   }, {preCb: function(node, nodeParents) {
     if (SCOPE_BORDER.indexOf(node.type) !== -1) {
-      scope = new Scope({parent: scope, node: node})
+      var newScope = new Scope({parent: scope, node: node})
+      if (scope) scope.children.push(newScope)
+      scope = newScope
       node.scope = scope
       scopeStack.push(scope)
     }
