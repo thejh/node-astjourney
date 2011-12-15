@@ -28,16 +28,17 @@ Node.prototype.getScope = function() {
 function Scope(options) {
   this.parent = null
   this.node = null
-  this.variableUses = []
+  this.variableUses = {}
   this.declaredVariables = {}
     
   joinObj(this, options)
 }
   
 Scope.prototype.addVariableUsage = function(name, node) {
-  if (this.variableUses.indexOf(name) === -1) {
-    this.variableUses.push(name)
+  if (!this.variableUses.hasOwnProperty(name)) {
+    this.variableUses[name] = []
   }
+  this.variableUses[name].push({node:node})
 }
   
 Scope.prototype.addDeclaration = function(name, node, value) {
