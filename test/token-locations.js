@@ -19,3 +19,17 @@ test('locate-names', function (t) {
     t.ok(false, JSON.stringify(wantedKey)+" wasn't found")
   })
 })
+
+test('check whether position data is present in own source', function (t) {
+  var ast = journey.makeAst(fs.readFileSync(__dirname+'/../index.js', 'utf8'))
+  journey.updateParentData(ast)
+  var nodes = []
+  journey.visitAll(ast, function(node) {
+    if (node.type === 'toplevel') return
+    nodes.push(node)
+  })
+  t.plan(nodes.length)
+  nodes.forEach(function(node) {
+    t.ok(node.position != null, 'node with loc data (type: '+node.type+', parent type: '+node.parent.type+', index in parent: '+node.parent.rawNode.indexOf(node.rawNode)+')')
+  })
+})
