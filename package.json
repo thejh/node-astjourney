@@ -2,7 +2,7 @@
   "author": "Jann Horn <jannhorn@googlemail.com>",
   "name": "astjourney",
   "description": "It's a long journey, but on your way, you'll meet all the JS AST nodes.",
-  "version": "0.1.0",
+  "version": "0.2.6",
   "homepage": "https://github.com/thejh/node-journey",
   "repository": {
     "type": "git",

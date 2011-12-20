@@ -1,14 +1,70 @@
 var makeUglyAst = require('uglify-js').parser.parse;
+var uglyGenCode = require('uglify-js').uglify.gen_code;
 
+// ==== EXPORTS ====
 exports.makeAst = makeAst
 exports.visitAll = visitAll
+exports.updateParentData = updateParentData
+exports.addScopeData = addScopeData
+exports.stringifyAst = stringifyAst
+exports.Node = Node
+exports.Scope = Scope
+
+// ==== NODE ====
+function Node(type) {
+  this.type = type
+  this.parent = null
+  this.scope = null
+}
+
+Node.prototype.getScope = function() {
+  var node = this
+  while (node && !node.scope) {
+    node = node.parent
+  }
+  if (node.scope) return node.scope
+  throw new Error('could not find scope, use addScopeData and updateParentData to regenerate data')
+}
+
+// ==== SCOPE ====
+function Scope(options) {
+  this.parent = null
+  this.node = null
+  this.children = []
+  this.variableUses = {}
+  this.declaredVariables = {}
+    
+  joinObj(this, options)
+}
+  
+Scope.prototype.addVariableUsage = function(name, node) {
+  if (!this.variableUses.hasOwnProperty(name)) {
+    this.variableUses[name] = []
+  }
+  this.variableUses[name].push({node:node})
+}
+  
+Scope.prototype.addDeclaration = function(name, node, value) {
+  if (!this.declaredVariables.hasOwnProperty(name)) {
+    this.declaredVariables[name] = []
+  }
+  this.declaredVariables[name].push({node:node, value:value})
+}
+  
+Scope.prototype.getVariablesScope = function(name) {
+  var scope = this
+  while (scope && !scope.declaredVariables.hasOwnProperty(name)) {
+    scope = scope.parent
+  }
+  return scope
+}
 
 function makeAst(code) {
   var ast = makeUglyAst(code, false, true)
   return transformNode(ast)
   
-  function transformNode(uglyNode) {
-    var prettyNode = {}
+  function transformNode(uglyNode) { try {
+    var prettyNode = new Node(uglyNode[0])
     var childSources = []
     prettyNode.__defineGetter__('children', function() {
       var result = []
@@ -18,6 +74,7 @@ function makeAst(code) {
       })
       return result
     })
+
     prettyNode.type = uglyNode[0].name || uglyNode[0]
     prettyNode.rawNode = uglyNode
     if (uglyNode[0].start) {
@@ -26,6 +83,8 @@ function makeAst(code) {
       , endToken: uglyNode[0].end
       }
     }
+
+
     switch (prettyNode.type) {
       case 'string':
       case 'num':
@@ -35,8 +94,10 @@ function makeAst(code) {
       case 'toplevel':
       case 'block':
       case 'splice':
-        prettyNode.statements = uglyNode[1].map(transformNode)
-        childSources.push(function(){return prettyNode.statements})
+        if (uglyNode[1]) {
+          prettyNode.statements = uglyNode[1].map(transformNode)
+        }
+        childSources.push(function(){return prettyNode.statements || []})
         break
       case 'var':
       case 'const':
@@ -70,8 +131,10 @@ function makeAst(code) {
         break
       case 'throw':
       case 'return':
-        prettyNode.expr = transformNode(uglyNode[1])
-        childSources.push(function(){return [prettyNode.expr]})
+        if (uglyNode[1] != null) {
+          prettyNode.expr = transformNode(uglyNode[1])
+        }
+        childSources.push(function(){return prettyNode.expr ? [prettyNode.expr] : []})
         break
       case 'new':
       case 'call':
@@ -255,12 +318,258 @@ function makeAst(code) {
         throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
     }
     return prettyNode
+  } catch (e) {e.stack = 'Error in node '+JSON.stringify(uglyNode)+'\n'+e.stack; throw e}}
+}
+
+function stringifyAst(ast, opts) {
+  ast = transformNode(ast)
+  return uglyGenCode(ast, opts)
+
+  function transformNode(prettyNode) {
+    // don't attach properties here, e.g. a seq will be
+    // `arr=arr.concat()`ted later.
+    var uglyNode = [prettyNode.type]
+
+    switch (prettyNode.type) {
+      case 'string':
+      case 'num':
+      case 'name':
+        uglyNode.push(prettyNode.value)
+        break
+      case 'toplevel':
+      case 'block':
+      case 'splice':
+        uglyNode.push(prettyNode.statements ?
+          prettyNode.statements.map(transformNode)
+        : null)
+        break
+      case 'var':
+      case 'const':
+        uglyNode[1] = prettyNode.vardefs.map(function(def) {
+          var result = [def.name]
+          if (def.value) {
+            result.push(transformNode(def.value))
+          }
+          return result
+        })
+        break
+      case 'try':
+        uglyNode.push(prettyNode.tryBlock.map(transformNode))
+        
+        if (prettyNode.catchBlock) {
+          uglyNode.push(
+          [ prettyNode.catchVar
+          , prettyNode.catchBlock.map(transformNode)
+          ])
+        } else uglyNode.push(null)
+        
+        if (prettyNode.finallyBlock) {
+          uglyNode.push(prettyNode.finallyBlock.map(transformNode))
+        } else uglyNode.push(null)
+        
+        break
+      case 'throw':
+      case 'return':
+        if (prettyNode.expr) {
+          uglyNode.push(transformNode(prettyNode.expr))
+        } else uglyNode.push(null)
+      case 'new':
+      case 'call':
+        uglyNode.push(transformNode(prettyNode.func))
+        uglyNode.push(prettyNode.args.map(transformNode))
+        break
+      case 'switch':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(prettyNode.branches.map(function(branch) {
+          var uglyBranch = []
+          uglyBranch.push(prettyBranch.expr != null ?
+            transformNode(prettyBranch.expr)
+          :
+            null
+          )
+          branch.push(prettyBranch.body.map(transformNode))
+          return uglyBranch
+        }))
+        break
+      case 'break':
+      case 'continue':
+        uglyNode.push(prettyNode.label)
+        break
+      case 'conditional':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.ifExpr))
+        uglyNode.push(transformNode(prettyNode.elseExpr))
+        break
+      case 'assign':
+      case 'binary':
+        uglyNode.push(prettyNode.op)
+        uglyNode.push(transformNode(prettyNode.lvalue))
+        uglyNode.push(transformNode(prettyNode.rvalue))
+        break
+      case 'dot':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(prettyNode.property)
+        break
+      case 'function':
+      case 'defun':
+        uglyNode.push(prettyNode.name)
+        uglyNode.push(prettyNode.args)
+        uglyNode.push(prettyNode.body.map(transformNode))
+        break
+      case 'if':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.thenBlock))
+        uglyNode.push(prettyNode.elseBlock ?
+          transformNode(prettyNode.elseBlock)
+        :
+          null
+        )
+        break
+      case 'for':
+        uglyNode.push(prettyNode.init ?
+          transformNode(prettyNode.init)
+        :
+          null
+        )
+        uglyNode.push(prettyNode.condition ?
+          transformNode(prettyNode.condition)
+        :
+          null
+        )
+        uglyNode.push(prettyNode.step ?
+          transformNode(prettyNode.step)
+        :
+          null
+        )
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'for-in':
+        uglyNode.push(transformNode(prettyNode.init))
+        uglyNode.push(transformNode(prettyNode.key))
+        uglyNode.push(transformNode(prettyNode.object))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'while':
+      case 'do':
+        uglyNode.push(transformNode(prettyNode.condition))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'unary-prefix':
+      case 'unary-postfix':
+        uglyNode.push(prettyNode.op)
+        uglyNode.push(transformNode(prettyNode.expr))
+        break
+      case 'sub':
+        uglyNode.push(transformNode(prettyNode.expr))
+        uglyNode.push(transformNode(prettyNode.subscript))
+        break
+      case 'object':
+        uglyNode.push(prettyNode.props.map(function(prop) {
+          if (prop.value) {
+            return [prop.name, transformNode(prop.value)]
+          } else if (prop.getter) {
+            return [prop.name, transformNode(prop.getter), 'get']
+          } else if (prop.setter) {
+            return [prop.name, transformNode(prop.setter), 'set']
+          } else {
+            throw new Error('my code does weird stuff')
+          }
+        }))
+        break
+      case 'regexp':
+        uglyNode.push(prettyNode.regexp)
+        uglyNode.push(prettyNode.modifiers)
+        break
+      case 'array':
+        uglyNode.push(prettyNode.elements.map(transformNode))
+        break
+      case 'stat':
+        uglyNode.push(transformNode(prettyNode.stat))
+        break
+      case 'seq':
+        uglyNode = uglyNode.concat(prettyNode.exprs.map(transformNode))
+        break
+      case 'label':
+        uglyNode.push(prettyNode.name)
+        uglyNode.push(transformNode(prettyNode.loop))
+        break
+      case 'with':
+        uglyNode.push(transformNode(prettyNode.object))
+        uglyNode.push(transformNode(prettyNode.body))
+        break
+      case 'atom':
+        uglyNode.push(prettyNode.name)
+        break
+      default:
+        throw new Error('unknown node type '+JSON.stringify(prettyNode.type))
+    }
+    return uglyNode
   }
 }
 
-function visitAll(node, cb) {
-  node.children.forEach(function(child) {
-    visitAll(child, cb)
+function updateParentData(ast) {
+  visitAll(ast, function(node, parents) {
+    node.parent = parents.last
   })
-  cb(node)
+}
+
+function addScopeData(ast) {
+  if (!ast.type === 'toplevel') throw new Error('expecting a toplevel node on top')
+  
+  var SCOPE_BORDER = ['toplevel', 'function', 'defun']
+  
+  var scopeStack = []
+  var scope = null
+  visitAll(ast, function(node, nodeParents) {
+    if (SCOPE_BORDER.indexOf(node.type) !== -1) {
+      scopeStack.pop()
+      scope = scopeStack[scopeStack.length-1]
+    }
+    if (node.type === 'name') {
+      scope.addVariableUsage(node.value, node)
+    }
+    if (node.type === 'var' || node.type === 'const') {
+      node.vardefs.forEach(function(def) {
+        scope.addDeclaration(def.name, node, def.value)
+      })
+    }
+    if (node.type === 'defun') {
+      scope.addDeclaration(node.name, node, node)
+    }
+  }, {preCb: function(node, nodeParents) {
+    if (SCOPE_BORDER.indexOf(node.type) !== -1) {
+      var newScope = new Scope({parent: scope, node: node})
+      if (scope) scope.children.push(newScope)
+      scope = newScope
+      node.scope = scope
+      scopeStack.push(scope)
+    }
+  }})
+}
+
+function visitAll(node, cb, options) {
+  options = options || {}
+  var parents = options.parents || []
+  var childsParents = parents.concat([node])
+  childsParents.last = node
+  if (options.preCb) options.preCb(node, parents)
+  node.children.forEach(function(child) {
+    visitAll(child, cb, cloneWith(options, {parents: childsParents}))
+  })
+  cb(node, parents)
+}
+
+
+// ==== HELPERS ====
+function joinObj(base, joined) {
+  Object.keys(joined).forEach(function(key) {
+    base[key] = joined[key]
+  })
+}
+
+function cloneWith(base, joined) {
+  var result = {}
+  joinObj(result, base)
+  joinObj(result, joined)
+  return result
 }
