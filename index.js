@@ -64,7 +64,8 @@ function makeAst(code) {
   return transformNode(ast)
   
   function transformNode(uglyNode) { try {
-    var prettyNode = new Node(uglyNode[0])
+    if (!uglyNode[0]) throw new Error('invalid node with '+(typeof uglyNode === 'object' ? ('keys: '+Object.keys(uglyNode)) : ('type '+typeof uglyNode)))
+    var prettyNode = new Node(uglyNode[0].name || uglyNode[0])
     var childSources = []
     prettyNode.__defineGetter__('children', function() {
       var result = []
@@ -75,7 +76,6 @@ function makeAst(code) {
       return result
     })
 
-    prettyNode.type = uglyNode[0].name || uglyNode[0]
     prettyNode.rawNode = uglyNode
     if (uglyNode[0].start) {
       prettyNode.position =
