@@ -362,6 +362,7 @@ function stringifyAst(ast, opts) {
         if (prettyNode.expr) {
           uglyNode.push(transformNode(prettyNode.expr))
         } else uglyNode.push(null)
+        break
       case 'new':
       case 'call':
         uglyNode.push(transformNode(prettyNode.func))
