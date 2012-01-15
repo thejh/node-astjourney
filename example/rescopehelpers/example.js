@@ -1,6 +1,6 @@
 // Invocation: node example <srcfile> <dstfile>
 
-var journey = require('../')
+var journey = require('../../')
   , fs = require('fs')
   , has = Function.prototype.call.bind(Object.prototype.hasOwnProperty)
 
@@ -38,7 +38,6 @@ Object.keys(injections).forEach(function(funcname) {
   injections[funcname].forEach(function(rootfunc) {
     if (!functions[funcname]) throw new Error('meh.')
     rootfunc.body.push(functions[funcname])
-    console.log('new rootfunc body:', rootfunc.body)
   })
 })
 // write out code
