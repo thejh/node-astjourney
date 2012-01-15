@@ -11,10 +11,15 @@ exports.Node = Node
 exports.Scope = Scope
 
 // ==== NODE ====
-function Node(type) {
+function Node(type, data) {
+  var self = this
+
   this.type = type
   this.parent = null
   this.scope = null
+  if (data) Object.keys(data).forEach(function(key) {
+    self[key] = data[key]
+  })
 }
 
 Node.prototype.getScope = function() {
