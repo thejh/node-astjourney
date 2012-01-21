@@ -11,10 +11,15 @@ exports.Node = Node
 exports.Scope = Scope
 
 // ==== NODE ====
-function Node(type) {
+function Node(type, data) {
+  var self = this
+
   this.type = type
   this.parent = null
   this.scope = null
+  if (data) Object.keys(data).forEach(function(key) {
+    self[key] = data[key]
+  })
 }
 
 Node.prototype.getScope = function() {
@@ -373,6 +378,7 @@ function stringifyAst(ast, opts) {
         if (prettyNode.expr) {
           uglyNode.push(transformNode(prettyNode.expr))
         } else uglyNode.push(null)
+        break
       case 'new':
       case 'call':
         uglyNode.push(transformNode(prettyNode.func))

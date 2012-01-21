@@ -1,0 +1,1 @@
+foo=qux[0]["foo"],bar=qux[0]["bar"],baz=qux[1]
