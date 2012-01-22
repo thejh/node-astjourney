@@ -9,7 +9,7 @@
     "url": "git://github.com/thejh/node-journey.git"
   },
   "dependencies": {
-    "uglify-js": "*"
+    "uglify-js": "https://github.com/thejh/UglifyJS/tarball/more-locations"
   },
   "devDependencies": {
     "tap": "*"
