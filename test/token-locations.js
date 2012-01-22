@@ -28,8 +28,13 @@ test('check whether position data is present in own source', function (t) {
     if (node.type === 'toplevel') return
     nodes.push(node)
   })
-  t.plan(nodes.length)
   nodes.forEach(function(node) {
-    t.ok(node.position != null, 'node with loc data (type: '+node.type+', parent type: '+node.parent.type+', index in parent: '+node.parent.rawNode.indexOf(node.rawNode)+')')
+    t.ok(node.position != null, 'node with loc data (type: '+node.type+', parent type: '+node.parent.type
+                               +', index in parent: '+node.parent.rawNode.indexOf(node.rawNode)+')')
+    if (node.position != null) {
+      // pos and endpos
+      t.ok(node.position.startToken.pos <= node.position.endToken.pos, 'node starts before it ends (or at the same time), info from: '+node.rawNode[0].source)
+    }
   })
+  t.end()
 })
