@@ -20,8 +20,8 @@ test('locate-names', function (t) {
   })
 })
 
-test('check whether position data is present in own source', function (t) {
-  var ast = journey.makeAst(fs.readFileSync(__dirname+'/../index.js', 'utf8'))
+function testPosDataPresent(file, t) {
+  var ast = journey.makeAst(fs.readFileSync(file, 'utf8'))
   journey.updateParentData(ast)
   var nodes = []
   journey.visitAll(ast, function(node) {
@@ -37,4 +37,7 @@ test('check whether position data is present in own source', function (t) {
     }
   })
   t.end()
-})
+}
+
+test('check whether position data is present in own source', testPosDataPresent.bind(null, __dirname+'/../index.js'))
+test('check whether position data is present in example/boxednodes.js', testPosDataPresent.bind(null, __dirname+'/../example/boxednodes.js'))
